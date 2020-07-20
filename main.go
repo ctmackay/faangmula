@@ -101,6 +101,7 @@ func main() {
 
 	counter := make(map[string]int)
 	companyMap := make(map[string]int)
+	companySlicer := make(map[string][]string)
 
 	file, _ := ioutil.ReadFile("company_list.json")
 	json.Unmarshal(file, &data)
@@ -117,12 +118,21 @@ func main() {
 		if val, ok := counter[firstChar]; ok {
 
 			counter[firstChar] = val + 1
+			companySlicer[firstChar] = append(companySlicer[firstChar], element)
 
 		} else {
 			counter[firstChar] = 1
 		}
 
 	}
+
+	// iterate over company slicer and shuffle the slices
+
+	for k := range companySlicer {
+		companySlicer[k] = shuffle(companySlicer[k])
+	}
+
+	fmt.Println(companySlicer)
 
 	shuffledArray := shuffle(data)
 
@@ -147,13 +157,18 @@ func main() {
 
 		var key string = strings.ToUpper(string(chr))
 
+		var companyThatBeginsWithLetter = ""
 		val := counter[key]
 		if val > 0 {
 			counter[key]--
+			companyThatBeginsWithLetter, companySlicer[key] = companySlicer[key][0], companySlicer[key][1:]
+
 		} else {
 			fmt.Println("Out of letters for this character. need to try a new word.")
+			break
 		}
-		fmt.Printf("index: %2v  chr: %c remaining: %d\n", i, chr, val)
+
+		fmt.Printf("index: %2v  chr: %c remaining: %d %s\n", i, chr, val, companyThatBeginsWithLetter)
 
 	}
 
