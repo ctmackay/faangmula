@@ -149,11 +149,12 @@ func main() {
 
 	randomWord := words[randInt]
 
+	// randomWord = "TATANKA"
 	fmt.Println(randomWord)
 
-	fmt.Println(counter)
+	// fmt.Println(counter)
 
-	for i, chr := range randomWord {
+	for _, chr := range randomWord {
 
 		var key string = strings.ToUpper(string(chr))
 
@@ -168,7 +169,8 @@ func main() {
 			break
 		}
 
-		fmt.Printf("index: %2v  chr: %c remaining: %d %s\n", i, chr, val, companyThatBeginsWithLetter)
+		// fmt.Printf("index: %2v  chr: %c remaining: %d %s\n", i, chr, val, companyThatBeginsWithLetter)
+		fmt.Println(companyThatBeginsWithLetter)
 
 	}
 
