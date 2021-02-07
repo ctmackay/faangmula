@@ -31,10 +31,16 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
+
+var counter map[string]int = make(map[string]int)
+var companySlicer map[string][]string = make(map[string][]string)
 
 func shuffle(src []string) []string {
 	final := make([]string, len(src))
@@ -94,14 +100,12 @@ func generateRandomInteger(min int, max int) int {
 	return numChars
 }
 
-func main() {
+func initializeThings() (map[string]int, map[string][]string) {
 	fmt.Println("hello")
 
 	var data []string
 
-	counter := make(map[string]int)
 	companyMap := make(map[string]int)
-	companySlicer := make(map[string][]string)
 
 	file, _ := ioutil.ReadFile("company_list.json")
 	json.Unmarshal(file, &data)
@@ -153,25 +157,65 @@ func main() {
 	fmt.Println(randomWord)
 
 	// fmt.Println(counter)
+	return counter, companySlicer
 
-	for _, chr := range randomWord {
+}
+
+func getCompaniesByAcronym(acronym string) []string {
+
+	var _counter map[string]int = make(map[string]int)
+	var _companySlicer map[string][]string = make(map[string][]string)
+
+	// Copy from the original map to the target map
+	for key, value := range companySlicer {
+		_companySlicer[key] = value
+	}
+	// Copy from the original map to the target map
+	for key, value := range counter {
+		_counter[key] = value
+	}
+
+	var companies []string
+	for _, chr := range acronym {
 
 		var key string = strings.ToUpper(string(chr))
 
 		var companyThatBeginsWithLetter = ""
-		val := counter[key]
+		val := _counter[key]
 		if val > 0 {
 			counter[key]--
-			companyThatBeginsWithLetter, companySlicer[key] = companySlicer[key][0], companySlicer[key][1:]
+			companyThatBeginsWithLetter, _companySlicer[key] = _companySlicer[key][0], _companySlicer[key][1:]
 
 		} else {
 			fmt.Println("Out of letters for this character. need to try a new word.")
 			break
 		}
 
-		// fmt.Printf("index: %2v  chr: %c remaining: %d %s\n", i, chr, val, companyThatBeginsWithLetter)
-		fmt.Println(companyThatBeginsWithLetter)
+		companies = append(companies, companyThatBeginsWithLetter)
 
 	}
+	return companies
+}
 
+func homePage(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Welcome to the HomePage!")
+	fmt.Println("Endpoint Hit: homePage")
+}
+
+func routeGetCompaniesByAcronym(c *gin.Context) {
+	var ac string = c.Param("acronym")
+	var companyList = getCompaniesByAcronym(ac)
+	c.JSON(http.StatusOK, gin.H{"ac": ac, "companies": companyList})
+}
+
+func main() {
+	initializeThings()
+	r := gin.Default()
+
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"data": "hello world"})
+	})
+	r.GET("/getCompaniesByAcronym/:acronym", routeGetCompaniesByAcronym) // new
+
+	r.Run(":10000")
 }
