@@ -41,6 +41,8 @@ import (
 
 var counter map[string]int = make(map[string]int)
 var companySlicer map[string][]string = make(map[string][]string)
+var masterCompanyList []string
+var words = readEnglishWords("usa2.txt")
 
 func shuffle(src []string) []string {
 	final := make([]string, len(src))
@@ -82,7 +84,7 @@ func generateRandomAcronymFromCompanyList(numChars int, shuffledArray []string) 
 
 		var company string
 
-		// pop element from array
+		// pop companyName from array
 		company, shuffledArray = shuffledArray[0], shuffledArray[1:]
 		fmt.Println(company)
 		var firstChar = string(company[0])
@@ -112,20 +114,23 @@ func initializeThings() (map[string]int, map[string][]string) {
 	// fmt.Println(data)
 
 	// generate company map
-	for _, element := range data {
+	for _, companyName := range data {
 
-		var firstChar = strings.ToUpper(string(element[0]))
-		// fmt.Println(index, element, firstChar)
+		var firstChar = strings.ToUpper(string(companyName[0]))
+		// fmt.Println(index, companyName, firstChar)
 
-		companyMap[element] = 1
+		masterCompanyList = append(masterCompanyList, companyName)
+		companyMap[companyName] = 1
 
 		if val, ok := counter[firstChar]; ok {
 
 			counter[firstChar] = val + 1
-			companySlicer[firstChar] = append(companySlicer[firstChar], element)
+			companySlicer[firstChar] = append(companySlicer[firstChar], companyName)
 
 		} else {
 			counter[firstChar] = 1
+			companySlicer[firstChar] = []string{companyName}
+
 		}
 
 	}
@@ -136,29 +141,45 @@ func initializeThings() (map[string]int, map[string][]string) {
 		companySlicer[k] = shuffle(companySlicer[k])
 	}
 
-	fmt.Println(companySlicer)
+	// fmt.Println(counter)
+	return counter, companySlicer
 
-	shuffledArray := shuffle(data)
+}
 
-	numChars := generateRandomInteger(4, 10)
-	fmt.Println("building a ", numChars, " character long string")
-
-	var acronym = generateRandomAcronymFromCompanyList(numChars, shuffledArray)
-	catchPhrase := "its fucked up working for " + acronym
-	fmt.Println("\n" + catchPhrase)
-
-	words := readEnglishWords("usa2.txt")
+func getRandDictWord() string {
 
 	randInt := generateRandomInteger(0, len(words))
 
 	randomWord := words[randInt]
 
-	// randomWord = "TATANKA"
-	fmt.Println(randomWord)
+	return randomWord
+}
 
-	// fmt.Println(counter)
-	return counter, companySlicer
+func getRandomAcronym() string {
+	fmt.Println(companySlicer)
 
+	shuffledArray := shuffle(masterCompanyList)
+
+	numChars := generateRandomInteger(4, 10)
+	fmt.Println("building a ", numChars, " character long string")
+
+	var acronym = generateRandomAcronymFromCompanyList(numChars, shuffledArray)
+
+	return acronym
+}
+
+func getRandomCatchphrase(acronym string) string {
+
+	catchPhrase1 := "its fucked up working at " + acronym
+	catchPhrase2 := "Oh he got fired? atleast he has " + acronym + " on his resume"
+	catchPhrase3 := "I have over 500 LeetCode solved. I still can't pass an interview with " + acronym
+
+	var phraseList = []string{catchPhrase1, catchPhrase2, catchPhrase3}
+	randInt := generateRandomInteger(0, len(phraseList)-1)
+	fmt.Println(randInt)
+	catchPhrase := phraseList[randInt]
+	fmt.Println("\n" + catchPhrase)
+	return catchPhrase
 }
 
 func getCompaniesByAcronym(acronym string) []string {
@@ -183,7 +204,7 @@ func getCompaniesByAcronym(acronym string) []string {
 		var companyThatBeginsWithLetter = ""
 		val := _counter[key]
 		if val > 0 {
-			counter[key]--
+			_counter[key]--
 			companyThatBeginsWithLetter, _companySlicer[key] = _companySlicer[key][0], _companySlicer[key][1:]
 
 		} else {
@@ -205,7 +226,37 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 func routeGetCompaniesByAcronym(c *gin.Context) {
 	var ac string = c.Param("acronym")
 	var companyList = getCompaniesByAcronym(ac)
-	c.JSON(http.StatusOK, gin.H{"ac": ac, "companies": companyList})
+	c.JSON(http.StatusOK, gin.H{"acronym": ac, "companies": companyList, "catchphrase": getRandomCatchphrase(ac)})
+}
+
+func routeGetRandomDictWord(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"companies": getRandDictWord()})
+}
+
+func routeGetRandomAcronym(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"companies": getRandomAcronym()})
+}
+
+// func routeGetRandomCatchphrase(c *gin.Context) {
+// 	c.JSON(http.StatusOK, gin.H{"companies": getRandomCatchphrase()})
+// }
+
+func routeGetAllCompanyList(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"companies": masterCompanyList})
+}
+
+func routeGetRandomSet(c *gin.Context) {
+	acronym := getRandomAcronym()
+	catchPhrase := getRandomCatchphrase(acronym)
+	companies := getCompaniesByAcronym(acronym)
+	c.JSON(http.StatusOK, gin.H{"companies": companies, "catchphrase": catchPhrase, "acronym": acronym})
+}
+
+func routeGetRandomSetDictWord(c *gin.Context) {
+	acronym := getRandDictWord()
+	catchPhrase := getRandomCatchphrase(acronym)
+	companies := getCompaniesByAcronym(acronym)
+	c.JSON(http.StatusOK, gin.H{"companies": companies, "catchphrase": catchPhrase, "acronym": acronym})
 }
 
 func main() {
@@ -215,7 +266,14 @@ func main() {
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"data": "hello world"})
 	})
-	r.GET("/getCompaniesByAcronym/:acronym", routeGetCompaniesByAcronym) // new
+	r.GET("/getCompaniesByAcronym/:acronym", routeGetCompaniesByAcronym)
+	r.GET("/getAllCompanies", routeGetAllCompanyList)
+	r.GET("/getRandomDictWord", routeGetRandomDictWord)
+	r.GET("/getRandomCatchPhrase", routeGetAllCompanyList)
+	r.GET("/getRandomAcronym", routeGetRandomAcronym)
+	r.GET("/getRandomSet", routeGetRandomSet)
+	r.GET("/getRandomDictSet", routeGetRandomSetDictWord)
 
-	r.Run(":10000")
+	port := ":10000"
+	r.Run(port)
 }
