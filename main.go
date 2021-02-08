@@ -39,10 +39,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var counter map[string]int = make(map[string]int)
-var companySlicer map[string][]string = make(map[string][]string)
+var counter = make(map[string]int)
+var companySlicer = make(map[string][]string)
 var masterCompanyList []string
-var words = readEnglishWords("usa2.txt")
+var words = readIntoArray("usa2.txt")
+var catchPhrases = readIntoArray("catchphrases.txt")
 
 func shuffle(src []string) []string {
 	final := make([]string, len(src))
@@ -55,7 +56,7 @@ func shuffle(src []string) []string {
 	return final
 }
 
-func readEnglishWords(src string) []string {
+func readIntoArray(src string) []string {
 	var lines []string
 
 	file, err := os.Open(src)
@@ -76,8 +77,8 @@ func readEnglishWords(src string) []string {
 	}
 
 	return lines
-
 }
+
 func generateRandomAcronymFromCompanyList(numChars int, shuffledArray []string) string {
 	var acronym string
 	for i := 0; i < numChars; i++ {
@@ -170,14 +171,11 @@ func getRandomAcronym() string {
 
 func getRandomCatchphrase(acronym string) string {
 
-	catchPhrase1 := "its fucked up working at " + acronym
-	catchPhrase2 := "Oh he got fired? atleast he has " + acronym + " on his resume"
-	catchPhrase3 := "I have over 500 LeetCode solved. I still can't pass an interview with " + acronym
-
-	var phraseList = []string{catchPhrase1, catchPhrase2, catchPhrase3}
-	randInt := generateRandomInteger(0, len(phraseList)-1)
+	randInt := generateRandomInteger(0, len(catchPhrases)-1)
 	fmt.Println(randInt)
-	catchPhrase := phraseList[randInt]
+	template := catchPhrases[randInt]
+	catchPhrase := strings.ReplaceAll(template, "ACRONYM_REPLACE", acronym)
+
 	fmt.Println("\n" + catchPhrase)
 	return catchPhrase
 }
@@ -237,9 +235,10 @@ func routeGetRandomAcronym(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"companies": getRandomAcronym()})
 }
 
-// func routeGetRandomCatchphrase(c *gin.Context) {
-// 	c.JSON(http.StatusOK, gin.H{"companies": getRandomCatchphrase()})
-// }
+func routeGetRandomCatchphrase(c *gin.Context) {
+	var ac string = c.Param("acronym")
+	c.JSON(http.StatusOK, gin.H{"companies": getRandomCatchphrase(ac)})
+}
 
 func routeGetAllCompanyList(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"companies": masterCompanyList})
@@ -269,7 +268,7 @@ func main() {
 	r.GET("/getCompaniesByAcronym/:acronym", routeGetCompaniesByAcronym)
 	r.GET("/getAllCompanies", routeGetAllCompanyList)
 	r.GET("/getRandomDictWord", routeGetRandomDictWord)
-	r.GET("/getRandomCatchPhrase", routeGetAllCompanyList)
+	r.GET("/getRandomCatchPhrase/:acronym", routeGetRandomCatchphrase)
 	r.GET("/getRandomAcronym", routeGetRandomAcronym)
 	r.GET("/getRandomSet", routeGetRandomSet)
 	r.GET("/getRandomDictSet", routeGetRandomSetDictWord)
